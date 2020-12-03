@@ -33,9 +33,9 @@ bool Worker::checkVersion()
 {
 	emit taskDescription(0, "Working...");
 
-	std::string out;
+	std::string currentVersion;
 	HTTP::contentType = "text/plain";
-	bool success = HTTP::Post("http://www.a4g4.com/API/injectorVersion.php", this->injectorVersion, out);
+	bool success = HTTP::Post("http://www.a4g4.com/API/injectorVersion.php", this->injectorVersion, currentVersion);
 	if (!success)
 	{
 		emit taskComplete(0, false);
@@ -43,8 +43,7 @@ bool Worker::checkVersion()
 		this->failed();
 	}
 
-	bool matches = out == this->injectorVersion;
-	if (!matches)
+	if (currentVersion != this->injectorVersion)
 	{
 		emit taskComplete(0, false);
 		emit taskDescription(0, "Download a newer version from https://particle.church");
