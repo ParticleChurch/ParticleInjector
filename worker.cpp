@@ -150,10 +150,9 @@ bool Worker::processIsCSGO(HANDLE hProcess)
 {
 	if (!hProcess) return false;
 
-	wchar_t _FileNameW[MAX_PATH];
-	GetModuleFileNameEx(hProcess, 0, _FileNameW, MAX_PATH);
-	std::wstring FileNameW(_FileNameW);
-	std::string FileName(FileNameW.begin(), FileNameW.end());
+	char _FileName[MAX_PATH + 1];
+	GetModuleFileNameEx(hProcess, 0, _FileName, MAX_PATH);
+	std::string FileName(_FileName);
 	std::string csgo = "csgo.exe";
 
 	if (FileName.size() < csgo.size()) return false;
@@ -176,11 +175,9 @@ bool Worker::csgoIsInitialized()
 
 		do
 		{
-			std::wstring moduleNameW = moduleEntry.szModule;
-			std::string moduleName(moduleNameW.begin(), moduleNameW.end());
 			for (int i = 0; i < numModules; i++)
 			{
-				if (CSGODLLs.at(i) == moduleName)
+				if (CSGODLLs.at(i) == moduleEntry.szModule)
 				{
 					modulesFound[i] = true;
 				}
@@ -226,9 +223,8 @@ void Worker::failed()
 
 std::string Worker::getDesktopPath()
 {
-	wchar_t path[MAX_PATH + 1];
-	if (!SHGetSpecialFolderPath(HWND_DESKTOP, (LPWSTR)path, CSIDL_DESKTOP, FALSE))
+	char path[MAX_PATH + 1];
+	if (!SHGetSpecialFolderPath(HWND_DESKTOP, path, CSIDL_DESKTOP, FALSE))
 		return "C:/";
-	std::wstring pathW(path);
-	return std::string(pathW.begin(), pathW.end());
+	return std::string(path);
 }
