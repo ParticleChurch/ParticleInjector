@@ -34,7 +34,8 @@ bool Worker::checkVersion()
 	emit taskDescription(0, "Working...");
 
 	std::string out;
-	bool success = HTTP::Post("https://www.a4g4.com/API/InjectorVersion.php", this->injectorVersion, out);
+	HTTP::contentType = "text/plain";
+	bool success = HTTP::Post("http://www.a4g4.com/API/injectorVersion.php", this->injectorVersion, out);
 	if (!success)
 	{
 		emit taskComplete(0, false);
@@ -172,6 +173,7 @@ bool Worker::csgoIsInitialized()
 
 		int numModules = CSGODLLs.size();
 		bool* modulesFound = (bool*)malloc(numModules);
+		if (!modulesFound) return false;
 
 		do
 		{
@@ -190,6 +192,7 @@ bool Worker::csgoIsInitialized()
 				allModulesLoaded = false;
 		}
 		CloseHandle(snapshot);
+		free(modulesFound);
 	}
 	if (!allModulesLoaded)
 		return false;
