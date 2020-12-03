@@ -90,6 +90,8 @@ public:
     void addTopbar();
     void addContent();
 
+    void paintEvent(QPaintEvent* e);
+
 public slots:
     void animationUpdate();
     void workerTaskComplete(int taskNumber, bool success);

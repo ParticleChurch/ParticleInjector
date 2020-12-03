@@ -212,6 +212,11 @@ void MainWindow::animationUpdate()
     }
 }
 
+void MainWindow::paintEvent(QPaintEvent* e)
+{
+    // todo: maybe draw an outline or something, to help with visibility
+}
+
 Overlay::Overlay(const char* type, QWidget* parent) : QWidget(parent) {
     this->move(0, 0);
     this->_overlay_type = type;

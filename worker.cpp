@@ -3,16 +3,16 @@
 void Worker::run()
 {
 	if (!this->checkVersion())
-		goto FAIL;
+		this->failed();
 
 	if (!this->waitForCSGOToOpen())
-		goto FAIL;
+		this->failed();
 
 	if (!this->download())
-		goto FAIL;
+		this->failed();
 
 	if (!this->inject())
-		goto FAIL;
+		this->failed();
 
 	emit taskDescription(3, "Success! Closing in 3 seconds.");
 	std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -22,10 +22,6 @@ void Worker::run()
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	// main thread will exit after return
-	return;
-
-FAIL:
-	while (1) std::this_thread::sleep_for(std::chrono::seconds(1));; // never return
 	return;
 }
 
@@ -220,7 +216,7 @@ bool Worker::csgoIsInitialized()
 void Worker::failed()
 {
 	while (1)
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::this_thread::sleep_for(std::chrono::hours(1));
 }
 
 std::string Worker::getDesktopPath()
