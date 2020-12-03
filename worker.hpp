@@ -30,7 +30,7 @@ private:
         "serverbrowser.dll",
     };
 
-    InjectorVersion myVersion{1,0};
+    std::string injectorVersion = "1.0";
 
 public slots:
     void run() override;

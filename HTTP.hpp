@@ -1,137 +1,185 @@
 #pragma once
 
 #include <string>
-#include <Windows.h>
+#include <cassert>
+#include <iostream>
+#include <vector>
+
+// networking libraries
+#include <windows.h>
 #include <wininet.h>
 #pragma comment(lib, "wininet.lib")
-#include "API.hpp"
 
-//#define HTTP_VERBOSE
-#define INTERNET_FLAGS INTERNET_FLAG_DONT_CACHE | INTERNET_FLAG_SECURE | INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_COOKIES | INTERNET_FLAG_NO_UI | INTERNET_FLAG_PRAGMA_NOCACHE | INTERNET_FLAG_RELOAD | INTERNET_FLAG_SECURE
 namespace HTTP
 {
-    /* V2 HTTP */
+    constexpr DWORD defaultNoCacheFlags = INTERNET_FLAG_DONT_CACHE | INTERNET_FLAG_RELOAD | INTERNET_FLAG_PRAGMA_NOCACHE | INTERNET_FLAG_RELOAD;
+    constexpr DWORD defaultBaseFlags = INTERNET_FLAG_NO_COOKIES | INTERNET_FLAG_NO_UI;
+
+    extern bool debug;
+    extern std::string userAgent;
+    extern INTERNET_PORT port;
+    extern DWORD requestFlags;
+
+    /*
+        A post function used when the response is known,
+        for example, an api where you supply a 4 byte int,
+        and it responds with a 4 byte int which is the input + 1
+    */
     template <class PostData, class ResponseFormat>
-    bool Post(std::string URL, PostData Data, ResponseFormat* Output)
+    bool StructuredPost(std::string URL, PostData postData, ResponseFormat* output)
     {
-        size_t ResponseSize = sizeof(ResponseFormat);
-        size_t MaximumAllowedResponseSize = 64 * 1024; // 64 kb
-        assert(ResponseSize <= MaximumAllowedResponseSize);
+        size_t responseSize = output ? sizeof(ResponseFormat) : 0;
 
-#ifdef HTTP_VERBOSE
-        std::cout << "Called HTTP::Post with url = " << URL << std::endl;
-#endif
-        // split into host and directory
-        // [ garbage ][     host part    ][     directory part     ]
-        //   https://    www.example.com     /subdirectory/api.php
-        if (URL.rfind("http://") == 0)
-            URL = URL.substr(7);
-        else if (URL.rfind("https://") == 0)
-            URL = URL.substr(8);
-
-        int FirstSlash = URL.find("/");
-        std::string Host = URL;
-        std::string Directory = "";
-        if (FirstSlash >= 0)
+        if (debug)
         {
-            Host = URL.substr(0, FirstSlash);
-            Directory = URL.substr(FirstSlash + 1);
+            std::cout << "HTTP::Post to url " << URL << std::endl;
+            if (!output)
+                std::cout << "(ignoring any response)" << std::endl;
         }
 
-#ifdef HTTP_VERBOSE
-        std::cout << "HTTP has determined that the Host is \"" + Host + "\" and Directory is \"" + Directory + "\"" << std::endl;
-        std::cout << "Now opening the request..." << std::endl;
-#endif // HTTP_VERBOSE
+        // split string into host and directory
+        // [ garbage ][     host part    ][     directory part     ]
+        //   https://    www.example.com     /subdirectory/api.php
 
-        // make a null terminated array of content types
-        LPCSTR ContentType = "application/octet-stream";
-        LPCSTR ContentTypes[] = { ContentType, NULL };
+        // remove protocol from url
+        if (URL.rfind("http://") == 0)
+        {
+            URL = URL.substr(7);
+        }
+        else if (URL.rfind("https://") == 0)
+        {
+            URL = URL.substr(8);
+        }
 
-        static HINTERNET hInternet = InternetOpenA(
-            // user agent
-            NULL, // TODO maybe rename this to make it harder to find in wireshark?
-            // something like a DNS service
+        // split host and directory
+        int directoryIndex = URL.find("/");
+        std::string host = URL;
+        std::string directory = "";
+        if (directoryIndex >= 0)
+        {
+            host = URL.substr(0, directoryIndex);
+            directory = URL.substr(directoryIndex + 1);
+        }
+
+        if (debug)
+        {
+            std::cout << "Determined that host = \"" << host << "\", and directory = \"" << directory << "\"" << std::endl;
+        }
+
+        HINTERNET hInternet = InternetOpen(
+            userAgent.c_str(),
             INTERNET_OPEN_TYPE_PRECONFIG,
-            // only used if above is set to INTERNET_OPEN_TYPE_PROXY
             NULL, NULL,
-            // flags
             0
         );
-        HINTERNET hConnection = InternetConnectA(
-            // our internet configuration
+        if (!hInternet)
+        {
+            if (debug)
+                std::cout << "Failed to open hInternet w/ error: " << GetLastError() << std::endl;
+            return false;
+        }
+
+        HINTERNET hConnection = InternetConnect(
             hInternet,
-            // host, e.g. www.example.com, note: no https://
-            Host.c_str(),
-            // port to connect on 443 = https
+            host.c_str(),
             INTERNET_DEFAULT_HTTPS_PORT,
-            // uername and password, null because we authenticate in the request itself
             NULL, NULL,
-            // service type (allowed: ftp, http, gopher)
             INTERNET_SERVICE_HTTP,
-            // flags
-            0,
-            // context, not used in this application
-            0
+            0, 0
         );
-        HINTERNET hRequest = HttpOpenRequestA(hConnection,
-            // method
+        if (!hConnection)
+        {
+            if (debug)
+                std::cout << "Failed to open hConnection w/ error: " << GetLastError() << std::endl;
+            return false;
+        }
+
+        LPCSTR acceptedContentTypes[] = { "application/octet-stream", NULL };
+        HINTERNET hRequest = HttpOpenRequest(hConnection,
             "POST",
-            // file to search for
-            Directory.c_str(),
-            // http version
+            directory.c_str(),
             "HTTP/1.1",
-            // referrer
             0,
             // Long pointer to a null-terminated array of string pointers indicating content types accepted by the client
-            ContentTypes,
-            // flags
-            INTERNET_FLAGS,
-            // request context, not useful for this application
+            acceptedContentTypes,
+            requestFlags,
             0
         );
-        bool HTTPSuccess = HttpSendRequestA(hRequest,
-            // headers and length
+        if (!hRequest)
+        {
+            if (debug)
+                std::cout << "Failed to open hRequest w/ error: " << GetLastError() << std::endl;
+            return false;
+        }
+
+        bool requestSuccess = HttpSendRequestA(hRequest,
+            // headers and length, not supported yet
             NULL, 0,
             // post data and post length
-            (void*)&Data, sizeof(Data)
+            (void*)&postData, sizeof(postData)
         );
 
-#ifdef HTTP_VERBOSE
-        if (!HTTPSuccess)
-            std::cout << "HTTP::Post failed with error code " << GetLastError() << std::endl;
-        else
-            std::cout << "HTTP::Post succeeded" << std::endl;
-#endif // HTTP_VERBOSE
+        if (debug)
+        {
+            if (requestSuccess)
+                std::cout << "Request completed successfully" << std::endl;
+            else
+                std::cout << "Request failed, error: " << GetLastError() << std::endl;
+        }
 
-        if (!HTTPSuccess) return false;
+        if (!requestSuccess)
+            return false;
 
-        // read binary data from response
-        size_t BytesRead = 0;
-        BYTE* Buffer = (BYTE*)malloc(MaximumAllowedResponseSize);
-        bool ReadFileSuccess = InternetReadFile(hRequest, Buffer, MaximumAllowedResponseSize, (LPDWORD)(&BytesRead));
+        if (!output)
+            return true;
 
-#ifdef HTTP_VERBOSE
-        if (!ReadFileSuccess)
-            std::cout << "Failed to read response w/ error " << GetLastError() << std::endl;
-        else
-            std::cout << "Successfully validated response" << std::endl;
-#endif // HTTP_VERBOSE
+        DWORD bytesRead = 0;
+        char* buffer = (char*)malloc(responseSize + 1); // add one just to check if server has more to say after ResponseFormat
+        if (!buffer)
+        {
+            if (debug)
+                std::cout << "failed to malloc " << responseSize + 1 << " bytes for response buffer" << std::endl;
+            return false;
+        }
+        bool readSuccess = InternetReadFile(hRequest, buffer, responseSize + 1, &bytesRead);
 
-        if (!ReadFileSuccess) return false;
+        if (debug)
+        {
+            if (readSuccess)
+                std::cout << "InternetReadFile completed successfully" << std::endl;
+            else
+                std::cout << "InternetReadFile failed, error: " << GetLastError() << std::endl;
+        }
 
-        bool responseValid = BytesRead == ResponseSize;
+        if (!readSuccess)
+        {
+            free(buffer);
+            return false;
+        }
 
-#ifdef HTTP_VERBOSE
-        if (!responseValid)
-            std::cout << "The response was invalid, expected " << ResponseSize << " bytes but got " << BytesRead << " bytes" << std::endl;
-        else
-            std::cout << "Response is valid: got " << BytesRead << " bytes - now writing to output @ 0x" << std::hex << (DWORD)Output << std::dec << std::endl;
-#endif // HTTP_VERBOSE
+        if (debug)
+        {
+            if (bytesRead == responseSize)
+                std::cout << "Server response is valid, copying to output" << std::endl;
+            else if (bytesRead > responseSize)
+                std::cout << "WARNING: Server responded with " << bytesRead << " or more bytes, but only expected " << responseSize << " bytes" << std::endl;
+            else
+                std::cout << "Server response too short, expected " << responseSize << " bytes, but only got " << bytesRead << " bytes" << std::endl;
+        }
 
-        if (!responseValid) return false;
+        if (bytesRead < responseSize)
+        {
+            free(buffer);
+            return false;
+        }
 
-        memcpy((void*)Output, (void*)Buffer, ResponseSize);
-        free(Buffer);
+        memcpy(output, buffer, responseSize);
+        free(buffer);
         return true;
     }
-}
+
+    /*
+        a universal post function that works with strings
+    */
+    extern bool Post(std::string URL, std::string input, std::string& output);
+};

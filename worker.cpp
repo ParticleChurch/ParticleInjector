@@ -33,8 +33,8 @@ bool Worker::checkVersion()
 {
 	emit taskDescription(0, "Working...");
 
-	InjectorVersion CurrentVersion{0,0};
-	bool success = HTTP::Post<InjectorVersion, InjectorVersion>("https://www.a4g4.com/API/InjectorVersion.php", this->myVersion, &CurrentVersion);
+	std::string out;
+	bool success = HTTP::Post("https://www.a4g4.com/API/InjectorVersion.php", this->injectorVersion, out);
 	if (!success)
 	{
 		emit taskComplete(0, false);
@@ -42,7 +42,7 @@ bool Worker::checkVersion()
 		this->failed();
 	}
 
-	bool matches = CurrentVersion.major == this->myVersion.major && CurrentVersion.minor == this->myVersion.minor;
+	bool matches = out == this->injectorVersion;
 	if (!matches)
 	{
 		emit taskComplete(0, false);
