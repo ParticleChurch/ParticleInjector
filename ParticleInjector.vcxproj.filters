@@ -45,6 +45,12 @@
     <ClCompile Include="HTTP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ManualMapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Encryption.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="animation.hpp">
@@ -59,7 +65,10 @@
     <ClInclude Include="HTTP.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="API.hpp">
+    <ClInclude Include="ManualMapper.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Encryption.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

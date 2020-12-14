@@ -12,9 +12,9 @@
 #include <string>
 #include <algorithm>
 
-#include "worker.hpp"
 #include "animation.hpp"
 #include "color.hpp"
+#include "worker.hpp"
 
 constexpr Qt::WindowFlags MainWindowFlags = Qt::WindowType::FramelessWindowHint;
 

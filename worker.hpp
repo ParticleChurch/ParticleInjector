@@ -6,10 +6,10 @@
 #include <TlHelp32.h>
 #include <psapi.h>
 #include <string>
-#include <shlobj.h>
-#include "injector.hpp"
-#include "API.hpp"
+
 #include "HTTP.hpp"
+#include "ManualMapper.hpp"
+#include "Encryption.hpp"
 
 class Worker : public QThread
 {
@@ -32,6 +32,10 @@ private:
 
     std::string injectorVersion = "1.0";
 
+    ManualMapper* mapper = nullptr;
+    byte* file = nullptr;
+    uint64_t fileSize = 0;
+
 public slots:
     void run() override;
 
@@ -44,8 +48,6 @@ public slots:
     bool processIsCSGO(HANDLE hProcess);
     bool csgoIsInitialized();
     void failed();
-
-    std::string getDesktopPath();
 
 signals:
     void taskComplete(int taskNumber, bool success);

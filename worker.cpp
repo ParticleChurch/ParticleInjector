@@ -2,15 +2,21 @@
 
 void Worker::run()
 {
+	// give the user some time to at least see the window pop up, sheesh
+	std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
 	if (!this->checkVersion())
 		this->failed();
 
+	std::this_thread::sleep_for(std::chrono::milliseconds(250));
 	if (!this->waitForCSGOToOpen())
 		this->failed();
 
+	std::this_thread::sleep_for(std::chrono::milliseconds(250));
 	if (!this->download())
 		this->failed();
 
+	std::this_thread::sleep_for(std::chrono::milliseconds(250));
 	if (!this->inject())
 		this->failed();
 
@@ -29,20 +35,28 @@ bool Worker::checkVersion()
 {
 	emit taskDescription(0, "Working...");
 
-	std::string currentVersion;
 	HTTP::contentType = "text/plain";
-	bool success = HTTP::Post("http://www.a4g4.com/API/injectorVersion.php", this->injectorVersion, currentVersion);
-	if (!success)
+
+	DWORD nBytes = 0;
+	char* response = (char*)HTTP::Post("http://www.a4g4.com/API/injectorVersion.php", this->injectorVersion, &nBytes);
+
+	if (!response)
 	{
 		emit taskComplete(0, false);
 		emit taskDescription(0, "FAILED - Check your internet connection.");
 		this->failed();
 	}
+	std::string currentVersion(response, response + nBytes);
+	std::cout << "bytes read: " << nBytes << std::endl;
+	std::cout << "response: " << response << std::endl;
+	free(response);
 
 	if (currentVersion != this->injectorVersion)
 	{
 		emit taskComplete(0, false);
 		emit taskDescription(0, "Download a newer version from https://particle.church");
+		std::cout << "Current version: " << currentVersion.c_str() << std::endl;
+		std::cout << "My version: " << this->injectorVersion.c_str() << std::endl;
 		this->failed();
 	}
 
@@ -96,7 +110,16 @@ bool Worker::waitForCSGOToOpen()
 }
 bool Worker::download()
 {
-	std::this_thread::sleep_for(std::chrono::seconds(2));
+	emit taskDescription(2, "Downloading...");
+
+	DWORD bytesRead = 0;
+	this->file = HTTP::Post("https://www.a4g4.com/API/dll.php", "lol ur gay", &bytesRead);
+	this->fileSize = bytesRead;
+	if (!this->file || this->fileSize <= 0)
+	{
+		emit taskComplete(2, false);
+		emit taskDescription(2, "Failed - Check your internet connection.");
+	}
 
 	emit taskComplete(2, true);
 	emit taskDescription(2, "Success!");
@@ -105,22 +128,67 @@ bool Worker::download()
 
 bool Worker::inject()
 {
-	std::this_thread::sleep_for(std::chrono::seconds(2));
-	std::string DLLPath = this->getDesktopPath() + "\\CSGOCollabV1.dll";
-	qInfo() << DLLPath.c_str();
-	qInfo() << this->CSGO_PID;
-	qInfo() << sizeof(DWORD);
-	qInfo() << sizeof(HANDLE);
-	qInfo() << sizeof(LPVOID);
-	if (!INJECTOR::CSGO(DLLPath, this->CSGO_PID))
+	emit taskDescription(3, "Parsing Encrypted File");
+	Encryption::Header header = Encryption::parseHeader(this->file, this->fileSize);
+	if (!header.isValid)
 	{
 		emit taskComplete(3, false);
-		emit taskDescription(3, "FAILED - Please try again.");
+		emit taskDescription(3, "Encryption Header Invalid - Contact a developer.");
+		this->failed();
+	}
+	uint64_t dllSize = Encryption::getDecryptedSize(header, this->fileSize);
+
+	emit taskDescription(3, "Mapping...");
+	this->mapper = new ManualMapper(this->CSGO);
+	DWORD seekAddr = 0;
+	bool doneMapping = false;
+
+	byte* decryptedFileBuffer = (byte*)malloc(252);
+	if (!decryptedFileBuffer)
+	{
+		emit taskComplete(3, false);
+		emit taskDescription(3, "Failed - Could not allocate 252 bytes.");
 		this->failed();
 	}
 
+	while (!this->mapper->Errored() && !doneMapping)
+	{
+		seekAddr = this->mapper->GetNextFileSeekLocation();
+		size_t nBytesToEOF = dllSize - seekAddr;
+		if (seekAddr > dllSize)
+		{
+			emit taskComplete(3, false);
+			emit taskDescription(3, "Failed - Attempted to access past EOF.");
+			this->failed();
+		}
+		emit taskDescription(3, ("Processing chunk @ " + std::to_string(seekAddr)).c_str());
+
+		// map seekAddress to fileAddress
+		size_t chunkIndex = seekAddr / 252;
+		uint64_t chunkBase = (uint64_t)chunkIndex * (uint64_t)256 + (uint64_t)header.size;
+		Encryption::decryptChunk(header, chunkIndex, this->file + chunkBase, decryptedFileBuffer);
+
+		doneMapping = mapper->ProcessBytesFromFile(decryptedFileBuffer + seekAddr % 252, 252 - (seekAddr % 252));
+	}
+	if (!mapper->Errored())
+	{
+		mapper->Execute();
+	}
+	else
+	{
+		emit taskComplete(3, false);
+		emit taskDescription(3, (
+			"FAILED - Mapper error: " +
+			std::to_string(this->mapper->GetErrorContext()) + " - " +
+			std::to_string(this->mapper->GetErrorCode())
+		).c_str());
+
+		this->failed();
+	}
+	free(this->file);
+
 	emit taskComplete(3, true);
-	emit taskDescription(3, "Success! Closing in 3 seconds.");
+	emit taskDescription(3, "Success!");
 	return true;
 }
 
@@ -215,14 +283,8 @@ bool Worker::csgoIsInitialized()
 
 void Worker::failed()
 {
+	if (this->file) free(this->file);
+	if (this->mapper) delete this->mapper;
 	while (1)
 		std::this_thread::sleep_for(std::chrono::hours(1));
-}
-
-std::string Worker::getDesktopPath()
-{
-	char path[MAX_PATH + 1];
-	if (!SHGetSpecialFolderPath(HWND_DESKTOP, path, CSIDL_DESKTOP, FALSE))
-		return "C:/";
-	return std::string(path);
 }
