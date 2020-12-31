@@ -15,7 +15,6 @@
     <ClCompile Include="color.cpp" />
     <ClCompile Include="Encryption.cpp" />
     <ClCompile Include="HTTP.cpp" />
-    <ClCompile Include="Injector.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mainwindow.cpp" />
     <ClCompile Include="ManualMapper.cpp" />
@@ -26,7 +25,6 @@
     <ClInclude Include="color.hpp" />
     <ClInclude Include="Encryption.hpp" />
     <ClInclude Include="HTTP.hpp" />
-    <ClInclude Include="injector.hpp" />
     <ClInclude Include="ManualMapper.hpp" />
     <QtMoc Include="worker.hpp" />
     <QtMoc Include="mainwindow.hpp" />
