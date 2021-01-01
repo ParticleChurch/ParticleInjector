@@ -77,6 +77,7 @@ Encryption::Header Encryption::parseHeader(uint8_t* bytes, size_t nBytes)
 	if (nBytes < minHeaderSize)
 	{
 		head.isValid = false;
+		head.parseError = "Expected at least " + std::to_string(minHeaderSize) + " bytes, but got " + std::to_string(nBytes) + " bytes";
 		return head;
 	}
 
@@ -100,12 +101,14 @@ Encryption::Header Encryption::parseHeader(uint8_t* bytes, size_t nBytes)
 	if (!PARTICLECHURCH)
 	{
 		head.isValid = false;
+		head.parseError = "PARTICLECHURCH not found, actually got: " + std::string((char*)bytes, nBytes);
 		return head;
 	}
 
 	if (bytes[12] || bytes[23])
 	{
 		head.isValid = false;
+		head.parseError = "nonzero NULLS";
 		return head;
 	}
 
@@ -115,6 +118,7 @@ Encryption::Header Encryption::parseHeader(uint8_t* bytes, size_t nBytes)
 	if (nBytes < head.size)
 	{
 		head.isValid = false;
+		head.parseError = "bytes sent is less than bytes required";
 		return head;
 	}
 
@@ -122,6 +126,7 @@ Encryption::Header Encryption::parseHeader(uint8_t* bytes, size_t nBytes)
 	head.byteOffset = bytes[20];
 	head.byteModulo = bytes[26 + head.nRandomBytes];
 	head.isValid = true;
+	head.parseError = "none";
 
 	return head;
 }

@@ -5,6 +5,7 @@
 #include <random>
 #include <chrono>
 #include <fstream>
+#include <string>
 
 /*
 
@@ -50,10 +51,11 @@ namespace Encryption
 		uint8_t byteOffset;
 		uint8_t nRandomBytes;
 
-		bool isValid;
-
 		size_t size; // stores a number on interval [30, 285]
 		uint8_t* generateBytes();
+
+		bool isValid;
+		std::string parseError;
 	};
 
 	extern Header generateHeader();

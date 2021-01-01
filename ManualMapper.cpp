@@ -102,10 +102,9 @@ ManualMapper::~ManualMapper()
 	if (this->sectionHeaders) free(this->sectionHeaders);
 
 	// only free library if we did not execute it
-	if (this->processStillAlive())
+	if (!this->executed && this->processStillAlive())
 	{
-		if (!this->executed)
-			if (this->remoteAddressOfImage) VirtualFreeEx(this->process, this->remoteAddressOfImage, 0, MEM_RELEASE);
+		if (this->remoteAddressOfImage) VirtualFreeEx(this->process, this->remoteAddressOfImage, 0, MEM_RELEASE);
 		if (this->remoteAddressOfLoader) VirtualFreeEx(this->process, this->remoteAddressOfLoader, 0, MEM_RELEASE);
 	}
 
@@ -427,6 +426,14 @@ void ManualMapper::printHeaders()
 	std::cout << "e_ss       : " << this->DOSHeader.e_ss << std::endl;
 	std::cout << "e_sp       : " << this->DOSHeader.e_sp << std::endl;
 	std::cout << "e_csum     : " << this->DOSHeader.e_csum << std::endl;
+	std::cout << "e_ip       : " << this->DOSHeader.e_ip << std::endl;
+	std::cout << "e_cs       : " << this->DOSHeader.e_cs << std::endl;
+	std::cout << "e_lfarlc   : " << this->DOSHeader.e_lfarlc << std::endl;
+	std::cout << "e_ovno     : " << this->DOSHeader.e_ovno << std::endl;
+	std::cout << "e_oemid    : " << this->DOSHeader.e_oemid << std::endl;
+	std::cout << "e_oeminfo  : " << this->DOSHeader.e_oeminfo << std::endl;
+	std::cout << "e_lfanew   : " << this->DOSHeader.e_lfanew << std::endl;
+	std::cout << "sizeof     : " << sizeof(IMAGE_DOS_HEADER) << std::endl;
 
 	std::cout << "===== NT =====" << std::endl;
 	std::cout << "FileHeader.Machine              : " << this->NTHeaders.FileHeader.Machine << std::endl;
@@ -457,6 +464,7 @@ void ManualMapper::printHeaders()
 	std::cout << "OptionalHeader.SizeOfHeapCommit            : " << this->NTHeaders.OptionalHeader.SizeOfHeapCommit << std::endl;
 	std::cout << "OptionalHeader.LoaderFlags                 : " << this->NTHeaders.OptionalHeader.LoaderFlags << std::endl;
 	std::cout << "OptionalHeader.NumberOfRvaAndSizes         : " << this->NTHeaders.OptionalHeader.NumberOfRvaAndSizes << std::endl;
+	std::cout << "sizeof                                     : " << sizeof(IMAGE_NT_HEADERS) << std::endl;
 
 	for (int i = 0; i < this->NTHeaders.FileHeader.NumberOfSections; i++)
 	{
@@ -472,6 +480,8 @@ void ManualMapper::printHeaders()
 		std::cout << "NumberOfRelocations  : " << sh.NumberOfRelocations << std::endl;
 		std::cout << "NumberOfLinenumbers  : " << sh.NumberOfLinenumbers << std::endl;
 		std::cout << "Characteristics      : " << sh.Characteristics << std::endl;
+		std::cout << "sizeof               : " << sizeof(IMAGE_SECTION_HEADER) << std::endl;
+
 	}
 
 	std::cout << "===========================" << std::endl;

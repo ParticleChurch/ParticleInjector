@@ -77,7 +77,7 @@ void MainWindow::addTopbar()
     Animation::newAnimation("minimize-hovered", 0);
 
     // Label
-    this->windowLabel = new QLabel("PARTICLE.CHURCH INJECTOR", this->topbar);
+    this->windowLabel = new QLabel("A4G4 INJECTOR", this->topbar);
     this->windowLabel->move(7, 0);
     this->windowLabel->resize(this->width() - 67, this->topbar->height());
     this->windowLabel->setStyleSheet("color: rgb(120, 120, 120); font-size: 10pt; font-family: 'Arial'; font-weight: 700; font-style: italic");

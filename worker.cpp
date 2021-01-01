@@ -1,4 +1,5 @@
 #include "worker.hpp"
+#include "Debug.hpp"
 
 void Worker::run()
 {
@@ -33,40 +34,46 @@ void Worker::run()
 
 bool Worker::checkVersion()
 {
+	Debug::Log("===== Now beginning version check =====");
 	emit taskDescription(0, "Working...");
 
 	HTTP::contentType = "text/plain";
 
+	Debug::Log("Sending request");
 	DWORD nBytes = 0;
 	char* response = (char*)HTTP::Post("http://www.a4g4.com/API/injectorVersion.php", this->injectorVersion, &nBytes);
 
+	Debug::Log("Got " + std::to_string(nBytes) + " bytes in response @ " + std::to_string((DWORD)response));
 	if (!response)
 	{
+		Debug::Log("Version check failed - no http response");
 		emit taskComplete(0, false);
 		emit taskDescription(0, "FAILED - Check your internet connection.");
 		this->failed();
 	}
 	std::string currentVersion(response, response + nBytes);
-	std::cout << "bytes read: " << nBytes << std::endl;
-	std::cout << "response: " << response << std::endl;
 	free(response);
 
+	Debug::Log("Version sent by server: " + currentVersion);
+	Debug::Log("This version: " + this->injectorVersion);
 	if (currentVersion != this->injectorVersion)
 	{
+		Debug::Log("Version check failed - version mismatch");
 		emit taskComplete(0, false);
-		emit taskDescription(0, "Download a newer version from https://particle.church");
-		std::cout << "Current version: " << currentVersion.c_str() << std::endl;
-		std::cout << "My version: " << this->injectorVersion.c_str() << std::endl;
+		emit taskDescription(0, "Download a newer version from https://a4g4.com");
 		this->failed();
 	}
 
 	emit taskComplete(0, true);
 	emit taskDescription(0, "Success!");
+	Debug::Log("Version check successful");
 	return true;
 }
 bool Worker::waitForCSGOToOpen()
 {
+	Debug::Log("===== Now waiting for CS:GO to open =====");
 	bool wasAlreadyOpen = true;
+	Debug::Log("Searching for the process...");
 	HANDLE proc;
 	while (!(proc = this->getCSGO()))
 	{
@@ -77,12 +84,16 @@ bool Worker::waitForCSGOToOpen()
 
 	this->CSGO = proc;
 	this->CSGO_PID = GetProcessId(proc);
+	Debug::Log("Found CS:GO! Process handle: " + std::to_string((DWORD)proc) + ", PID: " + std::to_string(this->CSGO_PID));
 	if (!this->CSGO || !this->CSGO_PID)
 	{
-		emit taskDescription(1, "Failed to get CS:GO process ID.");
-		return false;
+		Debug::Log("Either the HANDLE or the PID was 0");
+		emit taskDescription(1, "Failed to open CS:GO");
+		emit taskComplete(1, false);
+		this->failed();
 	}
 
+	Debug::Log("Now waiting for CS:GO to initialize");
 	while (!this->csgoIsInitialized())
 	{
 		wasAlreadyOpen = false;
@@ -92,6 +103,7 @@ bool Worker::waitForCSGOToOpen()
 		DWORD ExitCode = 0;
 		if (!GetExitCodeProcess(this->CSGO, &ExitCode) || ExitCode != STILL_ACTIVE)
 		{
+			Debug::Log("CS:GO was closed before it finished initializing.");
 			// those fuckers closed csgo before it initialized >:(
 			emit taskDescription(1, "FAILED - CSGO has been closed.");
 			emit taskComplete(1, false);
@@ -104,39 +116,64 @@ bool Worker::waitForCSGOToOpen()
 		std::this_thread::sleep_for(std::chrono::seconds(3));
 	}
 
+	Debug::Log("success - CS:GO is initialized");
 	emit taskComplete(1, true);
 	emit taskDescription(1, "Success!");
 	return true;
 }
 bool Worker::download()
 {
+	Debug::Log("===== Now downloading latest dll =====");
 	emit taskDescription(2, "Downloading...");
 
 	DWORD bytesRead = 0;
-	this->file = HTTP::Post("https://www.a4g4.com/API/dll.php", "lol ur gay", &bytesRead);
+	this->file = HTTP::Post("https://www.a4g4.com/API/dll/download.php", "lol ur gay", &bytesRead);
+	Debug::Log("received " + std::to_string(bytesRead) + " bytes in response @ " + std::to_string((DWORD)this->file));
 	this->fileSize = bytesRead;
 	if (!this->file || this->fileSize <= 0)
 	{
+		Debug::Log("The HTTP request failed");
 		emit taskComplete(2, false);
 		emit taskDescription(2, "Failed - Check your internet connection.");
+		this->failed();
 	}
+
+	/*
+	free(this->file);
+	HANDLE hFile = CreateFileA("E:\\GitHub\\ParticleEncryption\\encrypted.dll", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL); // Open the DLL
+	this->fileSize = (DWORD)GetFileSize(hFile, NULL);
+	this->file = (BYTE*)VirtualAlloc(NULL, (size_t)this->fileSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	if (!ReadFile(hFile, this->file, this->fileSize, NULL, NULL))
+	{
+		Debug::Log("failed to open file");
+		emit taskComplete(2, false);
+		emit taskDescription(2, "Failed - couldn't open file.");
+		this->failed();
+	}
+	*/
 
 	emit taskComplete(2, true);
 	emit taskDescription(2, "Success!");
+	Debug::Log("Successfully downloaded file");
 	return true;
 }
 
 bool Worker::inject()
 {
+	Debug::Log("===== Now injecting =====");
 	emit taskDescription(3, "Parsing Encrypted File");
+	Debug::Log("Parsing file header");
 	Encryption::Header header = Encryption::parseHeader(this->file, this->fileSize);
 	if (!header.isValid)
 	{
+		Debug::Log("Failed to parse header, error: " + header.parseError);
 		emit taskComplete(3, false);
 		emit taskDescription(3, "Encryption Header Invalid - Contact a developer.");
 		this->failed();
 	}
 	uint64_t dllSize = Encryption::getDecryptedSize(header, this->fileSize);
+	Debug::Log("Header successfully parsed - size = " + std::to_string(header.size));
+	Debug::Log("Header str = " + std::string((char*)this->file, header.size));
 
 	emit taskDescription(3, "Mapping...");
 	this->mapper = new ManualMapper(this->CSGO);
@@ -146,15 +183,19 @@ bool Worker::inject()
 	byte* decryptedFileBuffer = (byte*)malloc(252);
 	if (!decryptedFileBuffer)
 	{
+		Debug::Log("Somehow failed to malloc(252) lmao u got a dumbass computer");
 		emit taskComplete(3, false);
 		emit taskDescription(3, "Failed - Could not allocate 252 bytes.");
 		this->failed();
 	}
 
+	Debug::Log("Now mapping");
+	Debug::Log("fileSize: " + std::to_string(this->fileSize));
+	Debug::Log("dllSize: " + std::to_string(dllSize));
+	size_t nChunks = (size_t)((fileSize - header.size) / 256);
 	while (!this->mapper->Errored() && !doneMapping)
 	{
 		seekAddr = this->mapper->GetNextFileSeekLocation();
-		size_t nBytesToEOF = dllSize - seekAddr;
 		if (seekAddr > dllSize)
 		{
 			emit taskComplete(3, false);
@@ -168,7 +209,18 @@ bool Worker::inject()
 		uint64_t chunkBase = (uint64_t)chunkIndex * (uint64_t)256 + (uint64_t)header.size;
 		Encryption::decryptChunk(header, chunkIndex, this->file + chunkBase, decryptedFileBuffer);
 
-		doneMapping = mapper->ProcessBytesFromFile(decryptedFileBuffer + seekAddr % 252, 252 - (seekAddr % 252));
+		bool isLastChunk = (chunkIndex + 1) >= nChunks;
+		if (isLastChunk)
+		{
+			for (int i = 0; i < 252 - header.endPadding; i++)
+			{
+				decryptedFileBuffer[i] = decryptedFileBuffer[i + header.endPadding];
+			}
+		}
+		byte* ptrToSoughtData = decryptedFileBuffer + seekAddr % 252;
+		size_t soughtDataSize = (isLastChunk ? 252 - header.endPadding : 252) - seekAddr % 252;
+
+		doneMapping = mapper->ProcessBytesFromFile(ptrToSoughtData, soughtDataSize);
 	}
 	if (!mapper->Errored())
 	{
@@ -176,6 +228,11 @@ bool Worker::inject()
 	}
 	else
 	{
+		Debug::Log("Mapper error: " + 
+			std::to_string(this->mapper->GetErrorContext()) + " - " +
+			std::to_string(this->mapper->GetErrorCode())
+		);
+
 		emit taskComplete(3, false);
 		emit taskDescription(3, (
 			"FAILED - Mapper error: " +
@@ -185,8 +242,9 @@ bool Worker::inject()
 
 		this->failed();
 	}
-	free(this->file);
 
+	Debug::Log("Mapping success");
+	free(this->file);
 	emit taskComplete(3, true);
 	emit taskDescription(3, "Success!");
 	return true;
@@ -283,6 +341,8 @@ bool Worker::csgoIsInitialized()
 
 void Worker::failed()
 {
+	Debug::Open();
+	Debug::Log("FAILURE");
 	if (this->file) free(this->file);
 	if (this->mapper) delete this->mapper;
 	while (1)

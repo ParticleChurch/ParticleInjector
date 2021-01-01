@@ -30,7 +30,7 @@ private:
         "serverbrowser.dll",
     };
 
-    std::string injectorVersion = "1.0";
+    std::string injectorVersion = "1.1";
 
     ManualMapper* mapper = nullptr;
     byte* file = nullptr;

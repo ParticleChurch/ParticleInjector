@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClCompile Include="animation.cpp" />
     <ClCompile Include="color.cpp" />
+    <ClCompile Include="Debug.cpp" />
     <ClCompile Include="Encryption.cpp" />
     <ClCompile Include="HTTP.cpp" />
     <ClCompile Include="main.cpp" />
@@ -23,6 +24,7 @@
   <ItemGroup>
     <ClInclude Include="animation.hpp" />
     <ClInclude Include="color.hpp" />
+    <ClInclude Include="Debug.hpp" />
     <ClInclude Include="Encryption.hpp" />
     <ClInclude Include="HTTP.hpp" />
     <ClInclude Include="ManualMapper.hpp" />
