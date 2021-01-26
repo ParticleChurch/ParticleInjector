@@ -95,7 +95,7 @@ namespace HTTP
         bool headersAdded = HttpAddRequestHeaders(
             hRequest,
             ("Content-Type: " + contentType + "\r\n").c_str(),
-            48,
+            -1L,
             HTTP_ADDREQ_FLAG_REPLACE
         );
 

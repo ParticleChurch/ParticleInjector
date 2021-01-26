@@ -127,34 +127,31 @@ bool Worker::download()
 	emit taskDescription(2, "Downloading...");
 
 	DWORD bytesRead = 0;
-	this->file = HTTP::Post("https://www.a4g4.com/API/dll/download.php", "lol ur gay", &bytesRead);
+	HTTP::userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36";
+	HTTP::contentType = "application/json";
+
+	this->file = HTTP::Post("https://www.a4g4.com/API/dll/download.php", "", &bytesRead);
 	Debug::Log("received " + std::to_string(bytesRead) + " bytes in response @ " + std::to_string((DWORD)this->file));
 	this->fileSize = bytesRead;
-	if (!this->file || this->fileSize <= 0)
+	if (!this->file || this->fileSize < 10000)
 	{
-		Debug::Log("The HTTP request failed");
+		if (!this->file)
+		{
+			Debug::Log("The dll download failed - got no response");
+		}
+		else
+		{
+			Debug::Log("The dll download failed - got only " + std::to_string(this->fileSize) + " bytes");
+			Debug::Log(("The bytes: " + std::string((char*)this->file, this->fileSize)).c_str());
+		}
 		emit taskComplete(2, false);
 		emit taskDescription(2, "Failed - Check your internet connection.");
 		this->failed();
 	}
 
-	/*
-	free(this->file);
-	HANDLE hFile = CreateFileA("E:\\GitHub\\ParticleEncryption\\encrypted.dll", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL); // Open the DLL
-	this->fileSize = (DWORD)GetFileSize(hFile, NULL);
-	this->file = (BYTE*)VirtualAlloc(NULL, (size_t)this->fileSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-	if (!ReadFile(hFile, this->file, this->fileSize, NULL, NULL))
-	{
-		Debug::Log("failed to open file");
-		emit taskComplete(2, false);
-		emit taskDescription(2, "Failed - couldn't open file.");
-		this->failed();
-	}
-	*/
-
+	Debug::Log("Successfully downloaded file");
 	emit taskComplete(2, true);
 	emit taskDescription(2, "Success!");
-	Debug::Log("Successfully downloaded file");
 	return true;
 }
 
