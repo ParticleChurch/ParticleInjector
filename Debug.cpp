@@ -1,6 +1,5 @@
 #include "Debug.hpp"
 
-// https://stackoverflow.com/questions/15543571/allocconsole-not-displaying-cout
 void CreateConsole()
 {
 	if (!AttachConsole(ATTACH_PARENT_PROCESS) && !AllocConsole()) {
@@ -32,7 +31,12 @@ void CreateConsole()
 namespace Debug
 {
 	bool Opened = false;
-	std::vector<std::string> LogHistory = {"A4G4 Injector - Debugger"};
+	std::vector<std::string> LogHistory = {
+		"ATTENTION - READ THIS:",
+		"An error has occured.",
+		"Please copy/paste ALL of the following text (or take a screenshot) and send it as a bug report.",
+		"", ""
+	};
 
 	void Log(std::string str)
 	{

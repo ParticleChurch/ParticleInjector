@@ -3,6 +3,7 @@
 #include <vector>
 #include <Windows.h>
 #include <iostream>
+#include "base64.hpp"
 
 namespace Debug
 {
