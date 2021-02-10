@@ -32,6 +32,16 @@ void Worker::run()
 	return;
 }
 
+void Worker::update()
+{
+	char exe_file[MAX_PATH];
+	GetModuleFileName(NULL, exe_file, MAX_PATH);
+	std::string InstallDirectory(exe_file, strlen(exe_file) - strlen("ParticleInjector.exe"));
+	std::string UpdatorEXE = InstallDirectory + "ParticleUpdator.exe";
+
+	HINSTANCE result = ShellExecuteA(NULL, "runas", UpdatorEXE.c_str(), "", InstallDirectory.c_str(), SW_HIDE);
+}
+
 bool Worker::checkVersion()
 {
 	Debug::Log("vcheck...");
@@ -54,6 +64,8 @@ bool Worker::checkVersion()
 
 	if (serverVersion != this->injectorVersion)
 	{
+		this->update();
+
 		unsigned char* _b64 = base64::encode((unsigned char*)serverVersion.c_str(), min(256, serverVersion.size()), 0);
 		std::string b64((char*)_b64);
 		free(_b64);
@@ -125,7 +137,7 @@ bool Worker::download()
 	HTTP::userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36";
 	HTTP::contentType = "application/json";
 
-	this->file = HTTP::Post("amazon.com", "", &bytesRead); // www.a4g4.com/API/dll/download.php
+	this->file = HTTP::Post("https://www.a4g4.com/API/dll/download.php", "", &bytesRead);
 	this->fileSize = bytesRead;
 	if (!this->file || this->fileSize < 10000)
 	{

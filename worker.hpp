@@ -30,7 +30,7 @@ private:
         "serverbrowser.dll",
     };
 
-    std::string injectorVersion = "1.2";
+    std::string injectorVersion = "1.3";
 
     ManualMapper* mapper = nullptr;
     byte* file = nullptr;
@@ -39,6 +39,7 @@ private:
 public slots:
     void run() override;
 
+    void update();
     bool checkVersion();
     bool waitForCSGOToOpen();
     bool download();

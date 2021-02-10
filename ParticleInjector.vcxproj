@@ -30,8 +30,15 @@
     <ClInclude Include="Encryption.hpp" />
     <ClInclude Include="HTTP.hpp" />
     <ClInclude Include="ManualMapper.hpp" />
+    <ClInclude Include="resource.h" />
     <QtMoc Include="worker.hpp" />
     <QtMoc Include="mainwindow.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ParticleInjector.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Release\Installer\Resources\favicon.ico" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{60194D91-CC81-4021-9356-F8D4138E4ABF}</ProjectGuid>
@@ -44,6 +51,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -89,7 +97,6 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -102,7 +109,6 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DebugInformationFormat>None</DebugInformationFormat>
       <Optimization>MaxSpeed</Optimization>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

@@ -83,7 +83,6 @@ void MainWindow::addTopbar()
     this->windowLabel->setStyleSheet("color: rgb(120, 120, 120); font-size: 10pt; font-family: 'Arial'; font-weight: 700; font-style: italic");
 };
 
-
 void MainWindow::addContent()
 {
     std::string TaskNames[]{
