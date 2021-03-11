@@ -19,18 +19,26 @@ private:
     HANDLE CSGO;
     DWORD CSGO_PID;
     std::vector<std::string> CSGODLLs{
-        "client.dll",
+        "csgo.exe",
+        "ntdll.dll",
         "engine.dll",
+        "tier0.dll",
+        "client.dll",
+        "server.dll",
+        "shaderapidx9.dll",
         "vguimatsurface.dll",
         "vgui2.dll",
         "vphysics.dll",
         "inputsystem.dll",
         "vstdlib.dll",
+        "studiorender.dll",
         "materialsystem.dll",
         "serverbrowser.dll",
     };
+    size_t numDllsLoaded = 0;
+    size_t totalDllsToLoad = 1;
 
-    std::string injectorVersion = "1.3";
+    std::string injectorVersion = "1.5";
 
     ManualMapper* mapper = nullptr;
     byte* file = nullptr;

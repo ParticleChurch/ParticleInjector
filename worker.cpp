@@ -105,7 +105,7 @@ bool Worker::waitForCSGOToOpen()
 	while (!this->csgoIsInitialized())
 	{
 		wasAlreadyOpen = false;
-		emit taskDescription(1, "Found - Waiting for CS:GO to initialize...");
+		emit taskDescription(1, ("Found - Waiting for CS:GO to initialize... (" + std::to_string(this->numDllsLoaded) + "/" + std::to_string(this->totalDllsToLoad) + ")").c_str());
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 
 		DWORD ExitCode = 0;
@@ -121,6 +121,7 @@ bool Worker::waitForCSGOToOpen()
 
 	if (!wasAlreadyOpen)
 	{
+		emit taskDescription(1, "Found - Loading...");
 		std::this_thread::sleep_for(std::chrono::seconds(3));
 	}
 
@@ -288,37 +289,8 @@ bool Worker::processIsCSGO(HANDLE hProcess)
 
 bool Worker::csgoIsInitialized()
 {
-	bool allModulesLoaded = true;
-	{
-		HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, this->CSGO_PID);
-		MODULEENTRY32 moduleEntry{};
-		moduleEntry.dwSize = sizeof(moduleEntry);
-
-		int numModules = CSGODLLs.size();
-		bool* modulesFound = (bool*)malloc(numModules);
-		if (!modulesFound) return false;
-
-		do
-		{
-			for (int i = 0; i < numModules; i++)
-			{
-				if (CSGODLLs.at(i) == moduleEntry.szModule)
-				{
-					modulesFound[i] = true;
-				}
-			}
-		} while (Module32Next(snapshot, &moduleEntry));
-
-		for (int i = 0; i < numModules; i++)
-		{
-			if (!modulesFound[i])
-				allModulesLoaded = false;
-		}
-		CloseHandle(snapshot);
-		free(modulesFound);
-	}
-	if (!allModulesLoaded)
-		return false;
+	this->totalDllsToLoad = this->CSGODLLs.size();
+	this->numDllsLoaded = 0;
 
 	bool WindowOpen = false;
 	{
@@ -336,6 +308,29 @@ bool Worker::csgoIsInitialized()
 		} while (hCurWnd != nullptr);
 	}
 	if (!WindowOpen)
+		return false;
+
+	bool allModulesLoaded = true;
+	{
+		HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, this->CSGO_PID);
+		MODULEENTRY32 moduleEntry{};
+		moduleEntry.dwSize = sizeof(moduleEntry);
+
+		do
+		{
+			for (int i = 0; i < this->totalDllsToLoad; i++)
+			{
+				if (CSGODLLs.at(i) == moduleEntry.szModule)
+				{
+					this->numDllsLoaded++;
+				}
+			}
+		} while (Module32Next(snapshot, &moduleEntry));
+		CloseHandle(snapshot);
+
+		allModulesLoaded = this->numDllsLoaded >= this->totalDllsToLoad;
+	}
+	if (!allModulesLoaded)
 		return false;
 
 	return true;
